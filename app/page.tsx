@@ -5,22 +5,21 @@ import AppShell from '@/components/AppShell'
 import Link from 'next/link'
 import { Activity, ClipboardCheck, Plus, LineChart, User } from 'lucide-react'
 import { getCurrentUserProfile } from '@/lib/auth'
-
-const feed = [
-  ['✅', 'Intubación validada', 'Dra. Pérez realizó una intubación exitosa. ¡Buen avance!'],
-  ['⭐', 'Nuevo hito docente', 'Dr. Soto alcanzó 20 procedimientos validados. Excelente progresión.'],
-  ['📝', 'Pendiente de validación', 'Dra. Rojas registró una toracocentesis. Requiere revisión del tutor.'],
-]
+import { getFeed } from '@/lib/feed'
 
 export default function HomePage() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [feed, setFeed] = useState<any[]>([])
 
   useEffect(() => {
-    async function loadProfile() {
+    async function load() {
       try {
         const data = await getCurrentUserProfile()
         setProfile(data)
+
+        const feedData = await getFeed(20)
+        setFeed(feedData || [])
       } catch (error) {
         console.error(error)
       } finally {
@@ -28,7 +27,7 @@ export default function HomePage() {
       }
     }
 
-    loadProfile()
+    load()
   }, [])
 
   const isDocente =
@@ -123,18 +122,43 @@ export default function HomePage() {
         </div>
 
         <div className="space-y-3">
-          {feed.map(([icon, title, text]) => (
+          {feed.length === 0 && (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+              <p className="text-sm text-white/60">
+                Aún no hay actividad reciente.
+              </p>
+            </div>
+          )}
+
+          {feed.map((item) => (
             <div
-              key={title}
+              key={item.id}
               className="rounded-3xl border border-white/10 bg-white/[0.04] p-4"
             >
               <div className="flex gap-3">
-                <span className="text-xl">{icon}</span>
+                <span className="text-xl">
+                  {item.tipo_evento === 'procedimiento_validado'
+                    ? '✅'
+                    : item.tipo_evento === 'hito_becado'
+                      ? '⭐'
+                      : '📝'}
+                </span>
+
                 <div>
-                  <p className="font-semibold">{title}</p>
-                  <p className="mt-1 text-sm text-white/65">{text}</p>
+                  <p className="font-semibold">
+                    {item.tipo_evento === 'procedimiento_validado'
+                      ? 'Procedimiento validado'
+                      : item.tipo_evento === 'hito_becado'
+                        ? 'Nuevo hito docente'
+                        : 'Nuevo registro'}
+                  </p>
+
+                  <p className="mt-1 text-sm text-white/65">
+                    {item.mensaje}
+                  </p>
+
                   <p className="mt-2 text-xs text-white/35">
-                    Hace pocos minutos
+                    {new Date(item.fecha_creacion).toLocaleString('es-CL')}
                   </p>
                 </div>
               </div>
